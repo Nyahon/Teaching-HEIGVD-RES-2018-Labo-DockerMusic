@@ -61,7 +61,7 @@ setInterval(function()
 const net = require('net');
 
 const PORT = 2205;
-const ADDRESS = '127.0.0.1';
+const ADDRESS = '0.0.0.0';
 
 var server = net.createServer(onClientConnected);
 server.listen(PORT, ADDRESS);
@@ -76,7 +76,8 @@ function onClientConnected(socket) {
         test.activeSince = instruments[port][2];
         tab.push(test);
     }
-    console.log(JSON.stringify(tab));
+
+    socket.write(JSON.stringify(tab));
     socket.destroy();
 }
 
