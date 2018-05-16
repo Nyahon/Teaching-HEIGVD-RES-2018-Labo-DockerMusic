@@ -3,11 +3,7 @@ var dgram = require('dgram');
 
 var s = dgram.createSocket('udp4');
 var moment = require('moment')
-
 var instruments = [];
-var times = [5];
-var active = [5];
-
 
 s.bind(2205, function(){
     console.log("Joining multicast group");
@@ -15,9 +11,9 @@ s.bind(2205, function(){
 })
 s.on('message', function(msg, source) {
     console.log("Data has arrived: " + msg + ". Sourc IP: " + source.address + ". Source port: " + source.port);
-    console.log(msg.uuid);
     var sound = msg.toString();
     var instrument;
+    var port = source.port;
     switch(sound){
         case "ti-ta-ti":
             instrument = "piano";
@@ -35,16 +31,18 @@ s.on('message', function(msg, source) {
             instrument = "trumpet";
             break;
     }
-    //allMessages.push(instrument);
-    if(instruments.indexOf(instrument) == -1){
-        instruments.push(instrument);
-        active[(instruments.indexOf(instrument))] = (moment() );
+    if(!instruments[port]){
+        var uuid = guid();
+        instruments[port] = [];
+        instruments[port].push(instrument);
+        instruments[port].push(uuid);
+        instruments[port].push(moment());
+
     }
-
-    times[(instruments.indexOf(instrument))] = (moment() );
-    console.log(times);
-
-
+    // Actualisation du moment du dernier message
+    instruments[port].splice(3,1);
+    instruments[port].push(moment());
+    console.log(instruments);
 
 
 });
@@ -52,11 +50,9 @@ s.on('message', function(msg, source) {
 
 setInterval(function()
     {
-        for(i = 0; i < times.length; ++i){
-            if(moment().diff(times[i], 'seconds')>=5){
-                instruments.splice(i, 1);
-                times.splice(i, 1);
-                active.splice(i, 1)
+        for(port in instruments){
+            if(moment().diff(instruments[port][3], 'seconds') >= 5){
+                delete instruments[port];
             }
         }
     }, 10
@@ -73,16 +69,25 @@ server.listen(PORT, ADDRESS);
 function onClientConnected(socket) {
     console.log(`New client: ${socket.remoteAddress}:${socket.remotePort}`);
     var tab = [];
-    //tab.push(instruments);
-    for(i = 0; i < instruments.length; ++i){
+    for(port in instruments) {
         var test = new Object();
-        test.instrument = instruments[i];
-        test.activeSince = active[i];
+        test.uuid = instruments[port][1];
+        test.instrument = instruments[port][0];
+        test.activeSince = instruments[port][2];
         tab.push(test);
     }
-
     console.log(JSON.stringify(tab));
     socket.destroy();
 }
 
 console.log(`Server started at: ${ADDRESS}:${PORT}`);
+
+
+function guid() {
+    function s4() {
+        return Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16)
+            .substring(1);
+    }
+    return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+}
